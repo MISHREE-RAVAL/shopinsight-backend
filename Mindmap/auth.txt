@@ -80,3 +80,40 @@
 │   ├── .delete_user(id) ───► Drops targeted key map bucket file location from memory    │
 │   └── .count() ───────────► Evaluates internal size limit count of dictionary map       │
 └────────────────────────────────────────────────────────────────────────────────────────┘
+Phase A: Object Construction (class User)
+The developer executes: user = User(1, "test@mail.com", "my_password_hash", "Mishree", "Raval", "admin").
+
+Python jumps inside class User and invokes the __init__ method block.
+
+The method looks up the shared configuration variable User.MIN_PASSWORD_LOGIN_LENGTH.
+
+The Protection Gate checks the input: If the password length is less than 8, execution stops. Python reaches into class InvalidPasswordException to create an error token and halts the application.
+
+If the validation check passes, the parameters are saved into local memory slots (self.user_id, self.email, etc.) inside the newly created user object.
+
+Phase B: Database Registry Verification (class UserRepository)
+The developer runs: repo.add_user(user).
+
+Python moves inside class UserRepository and starts running the add_user method pipeline.
+
+The repository validates the incoming object's class type: isinstance(user, User). If someone accidentally passes a plain text string instead of a valid user object, the system raises a TypeError.
+
+The repository delegates data formatting checks back to the object by calling user.validate().
+
+Phase C: Deep Format Verification (class User)
+Execution moves back to class User, entering the validate method block.
+
+validate calls the class's internal static utility method: _is_valid_email(self.email).
+
+The Email Check runs: The static method verifies that the string contains an @ symbol and a trailing dot (.).
+
+If this check returns False, execution stops immediately. The system pulls the class InvalidEmailException blueprint and triggers the error alarm.
+
+Phase D: Storage Collision Audit (class UserRepository)
+If the email format is correct, execution returns to class UserRepository to run the identity collision scan.
+
+ID Check: The repository checks if the new user's ID already exists in the registry keys using if user.user_id in self._users. If it finds a match, it raises a UserAlreadyExistsException.
+
+Email Check: The repository loops through all existing records in memory to verify that the email address is unique. If a duplicate email is found, it raises a UserAlreadyExistsException.
+
+If all checks clear, the record is safely saved to the in-memory storage dictionary: self._users[user.user_id] = user. The method returns True, and the transaction completes successfully.
