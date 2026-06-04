@@ -80,40 +80,145 @@
 │   ├── .delete_user(id) ───► Drops targeted key map bucket file location from memory    │
 │   └── .count() ───────────► Evaluates internal size limit count of dictionary map       │
 └────────────────────────────────────────────────────────────────────────────────────────┘
-Phase A: Object Construction (class User)
-The developer executes: user = User(1, "test@mail.com", "my_password_hash", "Mishree", "Raval", "admin").
+To ensure absolute depth without diluting the quality or truncating explanations, I have divided this masterclass code breakdown into **5 comprehensive parts**. Each part deep-dives into a specific operational department of your codebase.
 
-Python jumps inside class User and invokes the __init__ method block.
+Here is our structural game plan:
 
-The method looks up the shared configuration variable User.MIN_PASSWORD_LOGIN_LENGTH.
+* **Part 1 (Current): The Error Isolation Department (Custom Exceptions)**
+* **Part 2:** The Assembly Line (User Initialization & Representation Protocols)
+* **Part 3:** The Memory Collections Engine (User Hashing & Sorting Protocols)
+* **Part 4:** The Security & Data Processing Lab (Properties, Validation, & Tiers)
+* **Part 5:** The In-Memory Database Controller (UserRepository & Diagnostic Verification)
 
-The Protection Gate checks the input: If the password length is less than 8, execution stops. Python reaches into class InvalidPasswordException to create an error token and halts the application.
+---
 
-If the validation check passes, the parameters are saved into local memory slots (self.user_id, self.email, etc.) inside the newly created user object.
+# PART 1: The Error Isolation Department (Custom Exceptions)
 
-Phase B: Database Registry Verification (class UserRepository)
-The developer runs: repo.add_user(user).
+When building an enterprise system, we never want the application to crash with a generic Python error screen. Instead, we build a dedicated **Exception Hierarchy Layer**. This acts like a network of warning sirens, allowing our software to gracefully isolate errors and instantly communicate what went wrong to frontend apps and cloud monitoring platforms.
 
-Python moves inside class UserRepository and starts running the add_user method pipeline.
+---
 
-The repository validates the incoming object's class type: isinstance(user, User). If someone accidentally passes a plain text string instead of a valid user object, the system raises a TypeError.
+### Class 1: `ShopInsightError`
 
-The repository delegates data formatting checks back to the object by calling user.validate().
+#### ──► Nutshell / TL;DR
 
-Phase C: Deep Format Verification (class User)
-Execution moves back to class User, entering the validate method block.
+The master blueprint for all specific errors across the entire app, allowing us to attach clear diagnostic web status codes to any failure.
 
-validate calls the class's internal static utility method: _is_valid_email(self.email).
+#### ──► Company-Level Project Analogy
 
-The Email Check runs: The static method verifies that the string contains an @ symbol and a trailing dot (.).
+Think of this as a company's **Official Corporate Incident Report Template**. Every department uses this exact same form whenever something goes wrong, ensuring that whether a failure happens in billing, shipping, or security, every report contains a standardized "Incident Code" and "Description" so managers can read them instantly.
 
-If this check returns False, execution stops immediately. The system pulls the class InvalidEmailException blueprint and triggers the error alarm.
+#### ──► Why It's There (Junior Context)
 
-Phase D: Storage Collision Audit (class UserRepository)
-If the email format is correct, execution returns to class UserRepository to run the identity collision scan.
+Standard Python exceptions like `ValueError` only let you store a text message string. However, in modern corporate web applications, the backend code needs to communicate with mobile apps and browsers. Web servers communicate using numeric **HTTP Status Codes** (like 401 for unauthorized, 404 for missing). By building a base custom exception that bundles a text `message` with a numeric `code`, we make it incredibly easy for our API gateways to instantly convert a code crash into an accurate web response without writing messy conversion logic.
 
-ID Check: The repository checks if the new user's ID already exists in the registry keys using if user.user_id in self._users. If it finds a match, it raises a UserAlreadyExistsException.
+#### ──► How It Works
 
-Email Check: The repository loops through all existing records in memory to verify that the email address is unique. If a duplicate email is found, it raises a UserAlreadyExistsException.
+* `class ShopInsightError(Exception):` tells Python that this class inherits all powers from the built-in native `Exception` class, allowing it to halt execution and generate debug trackings (tracebacks).
+* **Method: `__init__(self, message, code=400)**`
+* `super().__init__(message)` passes the text string directly up to the native Python exception handler so logs track the basic error string.
+* `self.message = message` and `self.code = code` capture these parameters and lock them directly onto the error instance for our web framework to read later.
 
-If all checks clear, the record is safely saved to the in-memory storage dictionary: self._users[user.user_id] = user. The method returns True, and the transaction completes successfully.
+
+* **Method: `__str__(self)**`
+* This is a special Python hook method. Whenever a developer prints the error or logs it to the cloud console (`print(error)`), Python automatically routes to this method. It formats the output into a clean string layout: `"[400] Bad Request Text"`.
+
+
+
+---
+
+### Class 2: `UnauthorizedException`
+
+#### ──► Nutshell / TL;DR
+
+A specialized security exception that triggers when an account tries to access a feature or role it doesn't have clearance for.
+
+#### ──► Company-Level Project Analogy
+
+An employee holding a temporary "Guest/Viewer" badge trying to scan their card on the door of the secure core Server Room. The electronic lock instantly flashes red, denies entry, logs a **Security Clearance Violation (Code 401)**, and alerts the security desk.
+
+#### ──► Why It's There (Junior Context)
+
+In a real production environment, security monitoring tools (like Datadog or AWS CloudWatch) scan application logs 24/7. If we used generic error classes for everything, our monitors wouldn't be able to distinguish a minor user error (like a typo in an email address) from a malicious hacking attempt. By isolating this into its own explicit `UnauthorizedException` class, we can set up automated alerts to page the security engineering team the moment a sudden spike of these specific exceptions occurs.
+
+#### ──► How It Works
+
+* `class UnauthorizedException(ShopInsightError):` sets up an inheritance chain. It is a child of `ShopInsightError`, meaning it automatically inherits the `.message`, `.code`, and custom formatting attributes.
+* **Method: `__init__(self, message)**`
+* When called, it immediately executes `super().__init__(message, code=401)`. This intercepts the construction phase and forces the HTTP response code to **401**—the universally recognized internet standard status code for authentication and credential clearance failures.
+
+
+
+---
+
+### Class 3: `InvalidEmailException`
+
+#### ──► Nutshell / TL;DR
+
+A validation guard exception that fires if an incoming email address fails to pass our structural format syntax constraints.
+
+#### ──► Company-Level Project Analogy
+
+A customer trying to mail a physical package but writing a completely broken street address that lacks a city or zip code. The postal clerk spots the error immediately and hands the package straight back to the user, refusing to put it on the delivery truck.
+
+#### ──► Why It's There (Junior Context)
+
+Data integrity is critical for a company's bottom line. If a user successfully registers with a malformed email address (like `mishree_at_shopinsight_com`), that corrupt string gets saved into the cloud database. Downstream microservices—such as automated marketing engines, billing systems, or password reset routers—will crash or waste expensive cloud resources trying to communicate with a non-existent endpoint. This exception stops bad data dead at the front gate.
+
+#### ──► How It Works
+
+* It subclasses `ShopInsightError`, gaining full access to the standardized reporting framework.
+* **Method: `__init__(self, message)**`
+* It passes its error data upwards using `super().__init__(message, code=422)`. It binds the code to **422** (Unprocessable Entity). This tells the frontend application that while the JSON payload arrived safely, the actual structural contents contained values the system cannot process.
+
+
+
+---
+
+### Class 4: `UserAlreadyExistsException`
+
+#### ──► Nutshell / TL;DR
+
+A database integrity safeguard that blocks registration requests if the username or identifier is already taken by an active customer.
+
+#### ──► Company-Level Project Analogy
+
+Someone walking into a bank and trying to set up a brand new checking account using a Social Security Number or national identity card number that is already active and registered to another customer in the bank's system.
+
+#### ──► Why It's There (Junior Context)
+
+If a system allows duplicate accounts to share the exact same email address, it creates a critical data collision vulnerability. When that user attempts to log in later, database lookups will return multiple records. The system won't know which account profile settings to load, which password hash to compare against, or which wallet to charge during transactions. This error explicitly prevents identity duplication.
+
+#### ──► How It Works
+
+* It sits directly in the inheritance pipeline of `ShopInsightError`.
+* **Method: `__init__(self, message)**`
+* It configures a default warning message and explicitly executes `super().__init__(message, code=409)`. The code **409** stands for "Conflict" in the HTTP protocol. This tells the web application that the request cannot be completed because it conflicts with a piece of data that already exists in active storage.
+
+
+
+---
+
+### Class 5: `InvalidPasswordException`
+
+#### ──► Nutshell / TL;DR
+
+A security-compliance error triggered whenever an account setup uses a password string that is too weak or short.
+
+#### ──► Company-Level Project Analogy
+
+An enterprise company's internal IT department rolling out a compliance policy that strictly mandates that no employee can set up a password shorter than 8 characters, automatically blocking simple passwords like `"12345"`.
+
+#### ──► Why It's There (Junior Context)
+
+To sell software to large companies or pass cybersecurity audits (like SOC2, ISO 27001, or PCI-DSS for credit card processing), a platform is legally and structurally required to enforce explicit credential complexity rules. We use this exception to provide immediate feedback to the registration engine, enforcing strict safety baselines before data ever reaches password encryption tools.
+
+#### ──► How It Works
+
+* It inherits from `ShopInsightError` to ensure it integrates seamlessly with our backend alert routers.
+* **Method: `__init__(self, message)**`
+* It calls `super().__init__(message, code=400)`. It applies HTTP code **400** (Bad Request), which universally indicates that the client sent malformed parameters that violate the explicit business logic constraints of the system.
+
+
+
+Whenever you are ready to study **Part 2: The User Assembly Line (Initialization & Representation Protocols)**, just type **"next"** and we will continue!
