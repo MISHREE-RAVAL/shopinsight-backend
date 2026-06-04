@@ -219,6 +219,109 @@ To sell software to large companies or pass cybersecurity audits (like SOC2, ISO
 * **Method: `__init__(self, message)**`
 * It calls `super().__init__(message, code=400)`. It applies HTTP code **400** (Bad Request), which universally indicates that the client sent malformed parameters that violate the explicit business logic constraints of the system.
 
+# PART 2: The User Assembly Line (Initialization & Representation Protocols)
 
+This layer deals with the **Domain Model**. In enterprise software, a domain model is a programmatic representation of a real-world business entity—in this case, an active corporate system user. This section controls how a user profile is validated upon creation and how it announces itself to logs and debugging consoles.
 
-Whenever you are ready to study **Part 2: The User Assembly Line (Initialization & Representation Protocols)**, just type **"next"** and we will continue!
+---
+
+### Class: `User`
+
+#### ──► Nutshell / TL;DR
+
+The foundational blueprint that dictates what data a user profile must hold, how it behaves, and what default constraints it must respect across the platform.
+
+#### ──► Company-Level Project Analogy
+
+Think of this as an enterprise corporation's **HR Employee Enrollment File**. Before a person can do work, collect a salary, or access company databases, HR mandates an exact structure: they must have an Employee ID, a verified name, an corporate email, and an assigned department role. The `User` class is that blank digital enrollment form.
+
+#### ──► Why It's There (Junior Context)
+
+In professional apps, you must avoid dealing with loose, unstructured data like raw dictionaries (`{"id": 1, "name": "Mishree"}`) to track your core entities. If someone misspells a dictionary key (`"emial"` instead of `"email"`), the app crashes silently or saves corrupt data. By wrapping user profiles inside a formal `User` class, we gain type-safety, code auto-completion in our IDEs, and centralize all user-focused validation logic into a single file.
+
+#### ──► How It Works
+
+* It defines the structural layout for memory allocation blocks. Whenever you instantiate a user, Python reserves a dedicated reference partition in RAM to exclusively track that individual's attributes, property calculations, and lifecycle hooks.
+
+---
+
+### Class Variables: `MIN_PASSWORD_LOGIN_LENGTH` & `VALID_ROLES`
+
+#### ──► Nutshell / TL;DR
+
+Immutable global configurations that establish the hard baseline compliance rules for all accounts platform-wide.
+
+#### ──► Company-Level Project Analogy
+
+The company security manual posted on the wall of the IT department specifying: *"All system passwords must be at least 8 characters long, and the only valid corporate job titles allowed on security badges are Shopper, Admin, Viewer, or Analyst."*
+
+#### ──► Why It's There (Junior Context)
+
+**Do not hardcode magic numbers or strings deep inside your methods.** If you check `if len(password) < 8:` down inside your code, and the security team later orders you to change the minimum length to 12, you will have to hunt through hundreds of code files to fix it. Placing these at the class level makes your code maintainable; you change it once at the top, and the entire app adapts immediately.
+
+#### ──► How It Works
+
+* These are defined directly inside the class body but outside any method definitions. This makes them **Class Variables**, meaning they are loaded into memory exactly once when the program boots up. They are shared universally by every single user object, saving precious RAM compared to copying those rules onto every individual account profile.
+
+---
+
+### Method: `User.__init__(...)`
+
+#### ──► Nutshell / TL;DR
+
+The automated initialization engine that processes incoming registration metrics, acts as a security guard to block invalid records, and saves clean data to memory.
+
+#### ──► Company-Level Project Analogy
+
+The **Badging Desk at Corporate Headquarters**. You hand the security officer your raw paperwork. The officer measures your password string length against the rulebook and checks your job title. If everything matches the manual, they print your physical access card; if it fails, they reject your paperwork immediately.
+
+#### ──► Why It's There (Junior Context)
+
+This is your primary defensive gate. We never trust data coming from the outside world (like web forms or third-party APIs). The `__init__` constructor guarantees that it is completely impossible to construct a corrupted or non-compliant `User` object anywhere inside our running application space.
+
+#### ──► How It Works
+
+* When you call `User(...)`, Python secretly fires `__new__` to allocate raw space, then passes that space along with your input parameters straight into `__init__(self, user_id, email, password_hash, first_name, last_name, role="viewer")`.
+* **The Guard Rails:** It evaluates `if len(password_hash) < self.MIN_PASSWORD_LOGIN_LENGTH`. If true, it raises an `InvalidPasswordException` and destroys the execution thread. It then evaluates `if role not in self.VALID_ROLES`, raising an `UnauthorizedException` if a fake role tag is passed.
+* **State Binding:** If both pass, it runs the mapping lines (`self.email = email`). The `self.` prefix targets that specific object's memory slot, anchoring the raw arguments into structured instance attributes.
+
+---
+
+### Method: `User.__str__(self)`
+
+#### ──► Nutshell / TL;DR
+
+A presentation hook that translates a complex memory object into a clean, human-readable string suitable for standard notifications, reports, and frontend views.
+
+#### ──► Company-Level Project Analogy
+
+An employee's **Desk Nameplate** or **Email Signature**. It doesn't show your internal database keys, password hashes, or background metadata. It simply presents your clear identity format: `"Mishree Raval (admin@shopinsight.com)"`.
+
+#### ──► Why It's There (Junior Context)
+
+If you don't implement `__str__`, printing a user object via `print(user)` will display unreadable system memory pointers, like `<__main__.User object at 0x7f9b1042c1d0>`. This is useless for debugging logs or user interfaces. Overriding this magic method ensures that whenever the object is passed into standard text handlers, it displays clean, readable telemetry.
+
+#### ──► How It Works
+
+* This is a native Python protocol hook. Whenever you call `print(user)`, `str(user)`, or format text using `f"User info: {user}"`, Python automatically routes underneath the hood directly to this method. It executes the formatted string expression `f"{self.first_name} {self.last_name} ({self.email})"` and hands it back to the display output output stream.
+
+---
+
+### Method: `User.__repr__(self)`
+
+#### ──► Nutshell / TL;DR
+
+An explicit, unambiguous developer-centric representation format that prints the exact constructor blueprint needed to recreate this object instance down to the precise parameter level.
+
+#### ──► Company-Level Project Analogy
+
+The **Barcoded System Profile Printout** used exclusively by the IT systems administrator. It doesn't look pretty, but it explicitly displays every single data property field configuration exactly as it exists in the system index files.
+
+#### ──► Why It's There (Junior Context)
+
+While `__str__` is built for end-users and basic logs, `__repr__` (Representation) is strictly for **developers, crash reporters, and interactive terminals**. When your production code throws a critical error at 2:00 AM, your cloud logger needs to show you the exact parameters of the object that caused the crash so you can copy-paste them directly into your local machine to replicate the bug.
+
+#### ──► How It Works
+
+* Whenever an object is inspected inside an interactive python terminal, inside an array tracking loop, or via log capture utilities like `repr(user)`, Python bypasses `__str__` and executes this method. It generates a literal string showing the class execution syntax: `User(user_id=1, email='...', role='...', ...)`. This output can be dropped straight back into a test file to reconstruct the exact data state.
+
