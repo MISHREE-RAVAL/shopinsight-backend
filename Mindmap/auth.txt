@@ -1,0 +1,82 @@
+==================================================================================================
+                               SHOPINSIGHT CORE SYSTEM LAYOUT MAP
+==================================================================================================
+
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 1. THE EXCEPTION DEPT (Error Boundaries)                                               │
+│                                                                                        │
+│  class ShopInsightError(Exception)  [Base Factory Alarm]                               │
+│   ├── .message (Instance Property: str) ──► Custom human-friendly description text     │
+│   ├── .code    (Instance Property: int) ──► API-ready web response code (Default: 400) │
+│   └── __str__() ──────────────────────────► Formats log strings to: "[code] message"   │
+│                                                                                        │
+│    Inheritance Subclass Chains (Copy the parent base structure but alter specific codes): │
+│     ├── class InvalidPasswordException   ──► Hardcodes code = 400                      │
+│     ├── class UnauthorizedException      ──► Hardcodes code = 401                      │
+│     ├── class InvalidEmailException      ──► Hardcodes code = 422                      │
+│     └── class UserAlreadyExistsException ──► Hardcodes code = 409                      │
+└─────────────────────────────────────────────────────────────────────────┬──────────────┘
+                                                                          │
+         If validation fails, an Exception is raised across the wire ─────┼◄─────────────────────┐
+                                                                          │                      │
+┌─────────────────────────────────────────────────────────────────────────▼──────────────┐       │
+│ 2. THE BLUEPRINT DEPT (class User Domain Model)                                        │       │
+│                                                                                        │       │
+│  Class-Scope Configuration Constants (Shared, read-only guardrails):                    │       │
+│   ├── MIN_PASSWORD_LOGIN_LENGTH = 8                                                    │       │
+│   └── VALID_ROLES = ["shopper", "admin", "viewer", "analyst"]                          │       │
+│                                                                                        │       │
+│  __init__() Constructor Method [Instance Generator Gate]                               │       │
+│   │   Takes raw inputs ──► verifies parameters against Class Constants                 │       │
+│   └── Binds clean data to local instance memory state slots:                           │       │
+│        ├── .user_id       (int) ────► Master unique account database index record      │       │
+│        ├── .email         (str) ────► Account identity name string                     │       │
+│        ├── .password_hash (str) ────► Secure verification sequence pass key             │       │
+│        ├── .first_name    (str) ────► Raw text storage                                 │       │
+│        ├── .last_name     (str) ────► Raw text storage                                 │       │
+│        └── .role          (str) ────► Access token categorization indicator            │       │
+│                                                                                        │       │
+│  Encapsulated Virtual Read-Only Properties (Calculated dynamically on-the-fly):        │       │
+│   ├── @property full_name  ──► Reads (.first_name + .last_name)                        │       │
+│   ├── @property is_admin   ──► Evaluates (.role == "admin")                            │       │
+│   ├── @property is_analyst ──► Evaluates (.role == "analyst")                          │       │
+│   └── @property is_premium ──► Evaluates (.role in ["admin", "analyst"])               │       │
+│                                                                                        │       │
+│  Internal Security & Data Serialization Infrastructure Methods:                        │       │
+│   ├── @_is_valid_email()  (Static Utility) ──► Structural validation logic engine     │       │
+│   ├── .validate()         (Instance Guard) ──► Triggers static email parser method     │       │
+│   ├── .has_permission()   (RBAC Checker)   ──► Converts role title string to numbers   │       │
+│   └── .to_dict()          (Serializer)     ──► Flattens all property states to JSON    │       │
+│                                                                                        │       │
+│  Built-in Python Hook Protocol Connections (Dunder Methods):                           │       │
+│   ├── __str__()  ──► Connected to print()      ──► Outputs full_name + email string     │       │
+│   ├── __repr__() ──► Connected to debugger     ──► Outputs absolute execution script   │       │
+│   ├── __eq__()   ──► Connected to '==' tool    ──► Matches (.user_id and .email)       │       │
+│   ├── __hash__() ──► Connected to set() loops  ──► Indexes (.user_id + .email) tuple   │       │
+│   └── __lt__() / __le__() ──► list.sort() keys ──► Organizes arrays by numerical IDs   │
+└─────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                          │
+                                          │ The initialized User object instance is passed
+                                          │ down into the repository system as a parameter.
+                                          ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 3. THE STORAGE DEPT (class UserRepository Engine)                                      │
+│                                                                                        │
+│  __init__() Initializer Method                                                         │
+│   └── self._users (Private Object Map Dictionary)                                      │
+│        ├── Key   = [int]  ──────────► Maps directly to User.user_id                     │
+│        └── Value = [User Object] ──► Holds entire instance memory allocation block      │
+│                                                                                        │
+│  Transaction Execution Interface Management Methods:                                   │
+│   ├── .add_user(user) ────► 1. Verifies parameter type is exactly class User           │
+│   │                       ├── 2. Invokes class method: User.validate()                 │
+│   │                       ├── 3. Scans dictionary key slots for duplicate user_id      │
+│   │                       ├── 4. Loops over stored values to find duplicate email strings│
+│   │                       └── 5. Commits data record: self._users[user_id] = user      │
+│   │                                                                                        │
+│   ├── .get_user(id) ──────► Searches dictionary keys for target user profile card       │
+│   ├── .get_all_users() ───► Collects all active dictionary values into a plain array   │
+│   ├── .get_users_by_role()► Runs filter check loop against each user.role property     │
+│   ├── .delete_user(id) ───► Drops targeted key map bucket file location from memory    │
+│   └── .count() ───────────► Evaluates internal size limit count of dictionary map       │
+└────────────────────────────────────────────────────────────────────────────────────────┘
